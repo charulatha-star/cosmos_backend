@@ -1,0 +1,35 @@
+import uuid
+from django.db import models
+from django.conf import settings
+
+class Message(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_messages'
+    )
+    room = models.ForeignKey(
+        'rooms.Room',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='messages'
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='received_messages'
+    )
+    text = models.TextField()
+    is_direct = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        dest = f"Room {self.room.name}" if self.room else f"User {self.recipient.name}"
+        return f"[{self.created_at.strftime('%H:%M')}] {self.sender.name} -> {dest}: {self.text[:30]}"

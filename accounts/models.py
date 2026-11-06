@@ -1,3 +1,5 @@
+# The accounts app contains the User model and its manager, which are used for authentication and user management in the Cosmos application.
+# The User model extends Django's AbstractBaseUser and PermissionsMixin to provide a custom user model with additional fields and functionality.
 
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
@@ -60,3 +62,46 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.name} ({self.role}) - {self.email}"
+    
+    
+    
+# Notes
+
+
+# uuid: Generates a unique ID for every user.
+
+
+# AbstractBaseUser: Provides basic authentication features like password management and login support.
+
+
+# PermissionsMixin: Provides permission and role-related functionality, including superuser permissions.
+
+
+# BaseUserManager: Helps us create and manage users.
+
+
+# models: Allows us to create database tables and columns using Python classes.
+
+
+
+
+
+
+# These two fields give the user administrator-related privileges.
+
+
+# is_staff=True: Allows the user to access the Django admin site.
+
+
+# is_superuser=True: Gives the user all permissions.
+
+
+
+
+# We inherit two Django classes:
+
+
+# AbstractBaseUser: Provides password hashing and authentication functionality.
+
+
+# PermissionsMixin: Provides permissions and superuser functionality.

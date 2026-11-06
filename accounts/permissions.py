@@ -1,3 +1,5 @@
+# permissions.py is a Python file that defines custom permission classes for a Django REST Framework application. 
+# These classes are used to control access to certain views based on the user's role and authentication status.
 from rest_framework.permissions import BasePermission
 
 

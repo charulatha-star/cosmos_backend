@@ -10,4 +10,7 @@ urlpatterns = [
     path('api/health/', health, name='health'),
     path('api/auth/', include('accounts.urls')),
     path('api/rooms/', include('rooms.urls')),
+    path('api/spaces/', include('rooms.urls')),
+    path('api/chat/', include('chat.urls')),
+    path('api/presence/', include('presence.urls')),
 ]

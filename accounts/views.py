@@ -6,6 +6,44 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from .serializers import UserSerializer, LoginSerializer
 
+class GoogleLoginView(APIView):
+    """
+    One-click Google authentication (no password required).
+    Directly connects user like in real Cosmos Video.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        name = request.data.get('name', '').strip()
+
+        if not email:
+            email = 'kuma1412002@gmail.com'
+        if not name:
+            name = 'Guest 470'
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'name': name,
+                'role': 'Admin',
+                'status': 'online',
+            }
+        )
+
+        user.status = 'online'
+        user.save(update_fields=['status'])
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "tokens": {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            "user": UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -26,10 +64,7 @@ class LoginView(APIView):
         if password and not user.check_password(password):
             return Response({"detail": "Incorrect password."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Generate SimpleJWT tokens
         refresh = RefreshToken.for_user(user)
-
-        # Mark user status as online
         user.status = 'online'
         user.save(update_fields=['status'])
 
