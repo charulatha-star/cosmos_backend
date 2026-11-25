@@ -22,4 +22,5 @@ sqlparse==0.6.1
 types-protobuf==7.35.1.20260906
 typing_extensions==4.16.0
 tzdata==2026.6
+whitenoise>=6.6.0
 yarl==1.25.1
