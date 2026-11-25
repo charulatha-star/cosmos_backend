@@ -1,4 +1,5 @@
 import datetime
+import threading
 import uuid
 from django.shortcuts import get_object_or_404
 from django.conf import settings
@@ -53,13 +54,9 @@ def check_is_space_owner(space, user):
     return SpaceMember.objects.filter(space=space, user=user, role='Owner').exists()
 
 
-def send_invitation_email(invitation, inviter, space=None):
-    if not space:
-        space = invitation.space
+def _send_invitation_email_worker(recipient_email, role, space_id, space_name):
     frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
-    manage_members_url = f"{frontend_url}/o/{space.id}/admin/manage-members"
-    space_name = space.name
-    recipient_email = invitation.email
+    manage_members_url = f"{frontend_url}/o/{space_id}/admin/manage-members"
 
     subject = f"Your Cosmos team {space_name} has a new member"
 
@@ -75,7 +72,6 @@ def send_invitation_email(invitation, inviter, space=None):
     <tr>
       <td align="center">
         <table width="560" border="0" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);border:1px solid #e2e8f0;">
-          <!-- Header Banner matching Cosmos Video -->
           <tr>
             <td style="background-color:#0d1117;padding:26px 24px;text-align:center;">
               <table border="0" cellspacing="0" cellpadding="0" style="margin:0 auto;">
@@ -90,19 +86,17 @@ def send_invitation_email(invitation, inviter, space=None):
               </table>
             </td>
           </tr>
-          <!-- Body Content matching real Cosmos screenshot -->
           <tr>
             <td style="padding:40px 36px 32px;color:#1e293b;font-size:15px;line-height:1.6;">
               <div style="font-size:18px;font-weight:700;color:#0f172a;margin-bottom:20px;">
                 Hi 👋
               </div>
               <p style="margin:0 0 16px 0;color:#334155;font-size:15px;line-height:1.6;">
-                <strong style="color:#0f172a;">{recipient_email}</strong> has been added to your team <strong style="color:#0f172a;">{space_name}</strong> on Cosmos as a <strong style="color:#0f172a;">{invitation.role}</strong>.
+                <strong style="color:#0f172a;">{recipient_email}</strong> has been added to your team <strong style="color:#0f172a;">{space_name}</strong> on Cosmos as a <strong style="color:#0f172a;">{role}</strong>.
               </p>
               <p style="margin:0 0 28px 0;color:#64748b;font-size:14px;line-height:1.5;">
                 You can view and manage your Cosmos team members here:
               </p>
-              <!-- Action Button matching real Cosmos screenshot -->
               <table border="0" cellspacing="0" cellpadding="0" style="margin:0 auto 28px;">
                 <tr>
                   <td align="center" style="border-radius:8px;background-color:#0d1117;">
@@ -114,22 +108,8 @@ def send_invitation_email(invitation, inviter, space=None):
               </table>
             </td>
           </tr>
-          <!-- Footer matching real Cosmos screenshot -->
           <tr>
             <td style="background-color:#f8fafc;padding:24px 36px;text-align:center;border-top:1px solid #f1f5f9;font-size:12px;color:#94a3b8;line-height:1.6;">
-              <table border="0" cellspacing="0" cellpadding="0" style="margin:0 auto 14px;">
-                <tr>
-                  <td style="padding:0 8px;">
-                    <a href="https://twitter.com/cosmosdotvideo" target="_blank" style="color:#64748b;text-decoration:none;font-weight:600;font-size:12px;">𝕏 cosmosdotvideo</a>
-                  </td>
-                  <td style="padding:0 8px;">
-                    <a href="https://instagram.com/cosmosdotvideo" target="_blank" style="color:#64748b;text-decoration:none;font-weight:600;font-size:12px;">📷 @cosmosdotvideo</a>
-                  </td>
-                  <td style="padding:0 8px;">
-                    <a href="https://linkedin.com/company/cosmosvideo" target="_blank" style="color:#64748b;text-decoration:none;font-weight:600;font-size:12px;">in cosmosvideo</a>
-                  </td>
-                </tr>
-              </table>
               <p style="margin:4px 0;color:#94a3b8;">Copyright © 2026 Cosmos Video Limited, All rights reserved.</p>
               <p style="margin:4px 0;color:#cbd5e1;">You are receiving this email because you are a member of this workspace.</p>
             </td>
@@ -143,7 +123,7 @@ def send_invitation_email(invitation, inviter, space=None):
 
     plain_message = (
         f"Hi 👋\n\n"
-        f"{recipient_email} has been added to your team {space_name} on Cosmos as a {invitation.role}.\n\n"
+        f"{recipient_email} has been added to your team {space_name} on Cosmos as a {role}.\n\n"
         f"You can view and manage your Cosmos team members here:\n"
         f"{manage_members_url}\n\n"
         f"See you in the office,\n"
@@ -165,6 +145,22 @@ def send_invitation_email(invitation, inviter, space=None):
     except Exception as e:
         print(f"[Email Logger Warning] Could not send via SMTP to {recipient_email}: {e}")
 
+
+def send_invitation_email(invitation, inviter=None, space=None):
+    if not space:
+        space = invitation.space
+    recipient_email = invitation.email
+    role = getattr(invitation, 'role', 'Member')
+    space_id = str(space.id)
+    space_name = space.name
+
+    # Run in a background thread so cloud firewall SMTP timeouts do not block or fail the HTTP response
+    t = threading.Thread(
+        target=_send_invitation_email_worker,
+        args=(recipient_email, role, space_id, space_name),
+        daemon=True
+    )
+    t.start()
 
 
 class SpaceListView(APIView):
