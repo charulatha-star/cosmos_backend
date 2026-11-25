@@ -12,9 +12,15 @@ from accounts.models import User
 from accounts.serializers import UserSerializer
 
 def resolve_room(room_id, created_by=None):
+    if not room_id:
+        return None
+
+    # Sanitize room_id by stripping trailing periods, slashes, spaces
+    clean_id = str(room_id).strip().rstrip('.').rstrip('/').strip()
+
     # 1. Try UUID lookup
     try:
-        val = uuid.UUID(str(room_id))
+        val = uuid.UUID(clean_id)
         room = Room.objects.filter(id=val).first()
         if room:
             return room
@@ -22,11 +28,11 @@ def resolve_room(room_id, created_by=None):
         pass
 
     # 2. Try by exact name or slug
-    room = Room.objects.filter(name__iexact=room_id).first()
+    room = Room.objects.filter(name__iexact=clean_id).first()
     if room:
         return room
 
-    clean_name = str(room_id).replace('-', ' ').replace('_', ' ').title()
+    clean_name = clean_id.replace('-', ' ').replace('_', ' ').title()
     room = Room.objects.filter(name__iexact=clean_name).first()
     if room:
         return room
@@ -34,7 +40,7 @@ def resolve_room(room_id, created_by=None):
     # 3. Auto-create if not found so room chat never 404s
     if created_by:
         return Room.objects.create(
-            name=clean_name if clean_name else str(room_id),
+            name=clean_name if clean_name else clean_id,
             type='temporary',
             capacity=20,
             created_by=created_by

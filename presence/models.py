@@ -19,6 +19,8 @@ class Presence(models.Model):
     current_desk = models.CharField(max_length=100, blank=True, null=True)
     x = models.IntegerField(default=420)
     y = models.IntegerField(default=580)
+    is_camera_on = models.BooleanField(default=False)
+    is_muted = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

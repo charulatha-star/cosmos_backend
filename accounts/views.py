@@ -93,6 +93,17 @@ class MeView(APIView):
     def get(self, request):
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
+    def patch(self, request):
+        user = request.user
+        name = request.data.get('name')
+        status_val = request.data.get('status')
+        if name:
+            user.name = name.strip()
+        if status_val:
+            user.status = status_val
+        user.save()
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
 class LogoutView(APIView):
     permission_classes = [AllowAny]
 

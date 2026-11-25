@@ -13,7 +13,9 @@ class PresenceListView(APIView):
 
     def get(self, request):
         space = request.query_params.get('space', 'billion')
-        presences = Presence.objects.filter(current_space=space)
+        # Ensure requesting user has an active presence record
+        Presence.objects.get_or_create(user=request.user, defaults={'current_space': space})
+        presences = Presence.objects.select_related('user').filter(current_space=space)
         serializer = PresenceSerializer(presences, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -40,6 +42,10 @@ class PresenceUpdateView(APIView):
             presence.current_desk = request.data['desk']
         if 'space' in request.data:
             presence.current_space = request.data['space']
+        if 'is_camera_on' in request.data:
+            presence.is_camera_on = bool(request.data['is_camera_on'])
+        if 'is_muted' in request.data:
+            presence.is_muted = bool(request.data['is_muted'])
 
         presence.save()
         serializer = PresenceSerializer(presence)

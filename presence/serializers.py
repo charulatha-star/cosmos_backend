@@ -19,5 +19,7 @@ class PresenceSerializer(serializers.ModelSerializer):
             'current_desk',
             'x',
             'y',
+            'is_camera_on',
+            'is_muted',
             'updated_at',
         ]
