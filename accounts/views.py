@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -25,11 +26,17 @@ class GoogleLoginView(APIView):
 
         try:
             user = User.objects.get(email__iexact=email)
-            if password:
-                # In Google Sign-In flow, synchronize/update password so users are never locked out by seeded/previous passwords
-                if not user.check_password(password):
+            if user.last_login is not None:
+                # User has logged in and set their password previously -> Strictly verify password
+                if password and not user.check_password(password):
+                    return Response(
+                        {"detail": "Wrong password. Try again or check your credentials."},
+                        status=status.HTTP_401_UNAUTHORIZED
+                    )
+            else:
+                # First time user is logging in after being invited -> Save their entered password
+                if password:
                     user.set_password(password)
-                    user.save(update_fields=['password'])
         except User.DoesNotExist:
             user = User.objects.create_user(
                 email=email,
@@ -38,8 +45,9 @@ class GoogleLoginView(APIView):
                 role='Admin' if 'admin' in email.lower() or User.objects.count() == 0 else 'Employee'
             )
 
-        update_fields = ['status']
+        update_fields = ['status', 'last_login']
         user.status = 'online'
+        user.last_login = timezone.now()
         if name and user.name != name:
             user.name = name
             update_fields.append('name')
