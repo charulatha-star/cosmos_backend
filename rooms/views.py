@@ -1,3 +1,6 @@
+import urllib.request
+import json
+import os
 import datetime
 import threading
 import uuid
@@ -132,6 +135,33 @@ def _send_invitation_email_worker(recipient_email, role, space_id, space_name):
 
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Cosmos Video <support@cosmos.video>')
 
+    # 1. Try Brevo HTTPS API first (Never blocked by cloud firewalls like Render)
+    brevo_key = getattr(settings, 'BREVO_API_KEY', '') or os.getenv('BREVO_API_KEY', '')
+    if brevo_key:
+        try:
+            url = 'https://api.brevo.com/v3/smtp/email'
+            headers = {
+                'accept': 'application/json',
+                'api-key': brevo_key,
+                'content-type': 'application/json'
+            }
+            sender_email = getattr(settings, 'EMAIL_HOST_USER', '') or 'charulatha@billiontags.co'
+            payload = {
+                'sender': {'name': 'Cosmos Video', 'email': sender_email},
+                'to': [{'email': recipient_email}],
+                'subject': subject,
+                'htmlContent': html_content,
+                'textContent': plain_message
+            }
+            req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                if resp.status in (200, 201):
+                    print(f"[Brevo HTTPS Success] Sent Cosmos invitation email to {recipient_email}")
+                    return
+        except Exception as e:
+            print(f"[Brevo HTTPS Warning] Could not send via Brevo to {recipient_email}: {e}")
+
+    # 2. Fallback to standard SMTP EmailBackend
     try:
         msg = EmailMultiAlternatives(
             subject=subject,
