@@ -19,8 +19,8 @@ class PresenceListView(APIView):
             defaults={
                 'current_space': space,
                 'current_desk': 'Reception Area',
-                'x': 705,
-                'y': 775,
+                'x': 270,
+                'y': 725,
             }
         )
         presences = Presence.objects.select_related('user').filter(current_space=space)
