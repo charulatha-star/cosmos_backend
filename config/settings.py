@@ -91,9 +91,17 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -143,4 +151,7 @@ else:
 LIVEKIT_URL = os.getenv('LIVEKIT_URL', 'ws://localhost:7880')
 LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY', 'devkey')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET', 'secret')
+
+
+
 
