@@ -71,21 +71,39 @@ class LoginView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        email = serializer.validated_data.get('email')
-        password = serializer.validated_data.get('password')
+        email = serializer.validated_data.get('email', '').strip().lower()
+        password = serializer.validated_data.get('password', '').strip()
+
+        if not email:
+            return Response({"detail": "Email address is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not password:
+            return Response({"detail": "Password is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            return Response({"detail": "User with this email not found."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "No account found with this email. Please contact your administrator."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-        # Verify password if set
-        if password and not user.check_password(password):
-            return Response({"detail": "Incorrect password."}, status=status.HTTP_401_UNAUTHORIZED)
+        # Strictly verify password
+        if not user.check_password(password):
+            return Response(
+                {"detail": "Incorrect email or password. Please try again."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.is_active:
+            return Response(
+                {"detail": "This account is inactive. Please contact your administrator."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         refresh = RefreshToken.for_user(user)
         user.status = 'online'
-        user.save(update_fields=['status'])
+        user.last_login = timezone.now()
+        user.save(update_fields=['status', 'last_login'])
 
         return Response({
             "tokens": {
